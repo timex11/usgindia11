@@ -1,0 +1,1133 @@
+// -----------------------------------------------------------------------------
+// USG INDIA - NATIONAL EDUCATION INFRASTRUCTURE PLATFORM
+// MASTER DATABASE SCHEMA (POSTGRESQL - SUPABASE)
+// -----------------------------------------------------------------------------
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public"]
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+  engineType      = "library"
+}
+
+// =============================================================================
+// 1️⃣ CORE SYSTEM (IDENTITY & ACCESS)
+// =============================================================================
+
+model Profile {
+  id        String   @id @default(uuid()) // Links to Supabase Auth UUID
+  email     String   @unique
+  fullName  String?  @map("full_name")
+  avatarUrl String?  @map("avatar_url")
+  role           UserRole          @default(STUDENT)
+  roles          UserRoleAssignment[]
+  policiesCreated Policy[]         @relation("PolicyCreator")
+  policiesUpdated Policy[]         @relation("PolicyUpdater")
+  
+  // Extended Identity
+  phoneNumber    String?   @unique @map("phone_number")
+  dateOfBirth    DateTime? @map("date_of_birth")
+  gender         Gender?
+  bio            String?
+  city           String?
+  state          String?
+  country        String?   @default("India")
+  pincode        String?
+  
+  // Verification
+  isVerified     Boolean   @default(false) @map("is_verified")
+  kycStatus      KycStatus @default(PENDING) @map("kyc_status")
+  verificationId String?   @map("verification_id")
+
+  // Academic Identity (Current)
+  studentId      String?   @map("student_id")
+  universityId   String?   @map("university_id")
+  collegeId      String?   @map("college_id")
+  courseId       String?   @map("course_id")
+  currentYear    Int?      @map("current_year")
+
+  // System Metadata
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  lastLogin      DateTime? @map("last_login")
+  isActive       Boolean   @default(true) @map("is_active")
+  isBanned       Boolean   @default(false) @map("is_banned")
+
+  // --- RELATIONS ---
+  university     University? @relation(fields: [universityId], references: [id])
+  college        College?    @relation(fields: [collegeId], references: [id])
+  course         Course?     @relation(fields: [courseId], references: [id])
+
+  // Professional Identity
+  experience     Experience[]
+  education      Education[]
+  skills         UserSkill[]
+  projects       Project[]
+  certifications Certification[]
+  resume         Resume?
+
+  // Applications
+  scholarshipApps ScholarshipApplication[]
+  jobApps         JobApplication[]
+  admissionApps   AdmissionApplication[]
+
+  // Social
+  posts          SocialPost[]     @relation("AuthorPosts")
+  comments       SocialComment[]  @relation("AuthorComments")
+  likes          SocialLike[]     @relation("UserLikes")
+  followers      SocialFollow[]   @relation("Following")
+  following      SocialFollow[]   @relation("Followers")
+  
+  // Messaging
+  sentMessages   ChatMessage[]    @relation("Sender")
+  chatParticipations ChatParticipant[]
+  
+  // Exams
+  examAttempts   ExamAttempt[]
+  
+  // AI
+  aiConversations AiConversation[]
+
+  // Institution
+  managedInstitutions InstitutionAdmin[]
+
+  // Admin
+  auditLogs      AuditLog[]
+  adminLogs      AdminLog[]
+
+  // Legacy/Restored
+  uploadedResources Resource[]
+  todos             Todo[]
+  ownedWorkspaces       Workspace[]          @relation("WorkspaceOwner")
+  workspaceMemberships  WorkspaceMember[]    @relation("WorkspaceMemberships")
+  alumniProfile       AlumniProfile?
+  mentorshipsAsMentee MentorshipRequest[] @relation("MenteeRequests")
+  donations           Donation[]
+
+  // Notifications
+  notifications  Notification[]
+
+  @@map("profiles")
+  @@index([email])
+  @@index([role])
+  @@schema("public")
+}
+
+model Role {
+  id          String                 @id @default(uuid())
+  name        String                 @unique
+  slug        String                 @unique
+  description String?
+  users       UserRoleAssignment[]
+  permissions RolePermission[]
+
+  @@map("roles")
+  @@schema("public")
+}
+
+model Permission {
+  id          String            @id @default(uuid())
+  name        String            @unique
+  slug        String            @unique
+  module      String            // e.g., "EXAMS", "USERS", "AI"
+  description String?
+  roles       RolePermission[]
+
+  @@map("permissions")
+  @@schema("public")
+}
+
+model UserRoleAssignment {
+  userId String
+  roleId String
+
+  user Profile @relation(fields: [userId], references: [id])
+  role Role    @relation(fields: [roleId], references: [id])
+
+  @@id([userId, roleId])
+  @@map("user_role_assignments")
+  @@schema("public")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id])
+  permission Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+  @@schema("public")
+}
+
+model Policy {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  effect      String   // "allow" or "deny"
+  rules       Json     // array of PolicyRule
+  priority    Int      @default(50)
+  isActive    Boolean  @default(true)
+  scope       String   // "global", "institution", "department"
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String
+  updatedBy   String
+
+  creator Profile @relation("PolicyCreator", fields: [createdBy], references: [id])
+  updater Profile @relation("PolicyUpdater", fields: [updatedBy], references: [id])
+
+  @@index([scope])
+  @@index([status])
+  @@index([isActive])
+  @@map("policies")
+  @@schema("public")
+}
+
+enum UserRole {
+  STUDENT
+  FACULTY
+  INSTITUTION_ADMIN
+  RECRUITER
+  PLATFORM_ADMIN
+  ALUMNI
+  CREATOR
+  @@schema("public")
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  @@schema("public")
+}
+
+enum KycStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  @@schema("public")
+}
+
+// =============================================================================
+// 2️⃣ DISCOVERY & INFORMATION (UNIVERSITIES & COURSES)
+// =============================================================================
+
+model University {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique // UGC Code or custom
+  slug        String   @unique
+  location    String?
+  logoUrl     String?  @map("logo_url")
+  bannerUrl   String?  @map("banner_url")
+  description String?
+  website     String?
+  establishedYear Int? @map("established_year")
+  type        UniversityType @default(PRIVATE)
+
+  // Details
+  ranking     Json?    // NIRF, QS rankings
+  accreditation String? // NAAC Grade
+  
+  // Relations
+  colleges    College[]
+  departments Department[]
+  courses     Course[]     // Direct courses
+  students    Profile[]
+  admins      InstitutionAdmin[]
+  resources   Resource[]
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("universities")
+  @@schema("public")
+}
+
+model College {
+  id           String   @id @default(uuid())
+  universityId String   @map("university_id")
+  name         String
+  code         String?
+  location     String?
+  
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  departments  Department[]
+  students     Profile[]
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("colleges")
+  @@schema("public")
+}
+
+model Department {
+  id           String   @id @default(uuid())
+  name         String
+  code         String?
+  universityId String?  @map("university_id")
+  collegeId    String?  @map("college_id")
+  
+  university   University? @relation(fields: [universityId], references: [id])
+  college      College?    @relation(fields: [collegeId], references: [id])
+  courses      Course[]
+
+  @@map("departments")
+  @@schema("public")
+}
+
+model Course {
+  id           String   @id @default(uuid())
+  title        String
+  code         String?
+  slug         String   @unique
+  description  String?
+  duration     String?  // e.g., "4 Years"
+  level        CourseLevel @default(UG)
+  
+  // Relations
+  universityId String?  @map("university_id")
+  departmentId String?  @map("department_id")
+  
+  university   University? @relation(fields: [universityId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
+  
+  students     Profile[]
+  syllabus     CourseModule[]
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("courses")
+  @@schema("public")
+}
+
+model CourseModule {
+  id          String   @id @default(uuid())
+  courseId    String   @map("course_id")
+  title       String
+  content     String?
+  orderIndex  Int      @default(0)
+
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("course_modules")
+  @@schema("public")
+}
+
+enum UniversityType {
+  CENTRAL
+  STATE
+  PRIVATE
+  DEEMED
+  @@schema("public")
+}
+
+enum CourseLevel {
+  UG
+  PG
+  PHD
+  DIPLOMA
+  CERTIFICATE
+  @@schema("public")
+}
+
+// =============================================================================
+// 3️⃣ EXAM SYSTEM (ENGINE & INFO)
+// =============================================================================
+
+model Exam {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  slug            String   @unique
+  type            ExamType @default(ENTRANCE)
+  
+  // Logistics
+  examDate        DateTime? @map("exam_date")
+  durationMinutes Int      @default(180) @map("duration_minutes")
+  totalMarks      Int      @default(100) @map("total_marks")
+  
+  // Content
+  syllabus        Json?
+  pattern         Json?
+  
+  questions       Question[]
+  attempts        ExamAttempt[]
+  
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("exams")
+  @@schema("public")
+}
+
+model Question {
+  id          String   @id @default(uuid())
+  examId      String   @map("exam_id")
+  text        String
+  imageUrl    String?  @map("image_url")
+  type        QuestionType @default(MCQ)
+  marks       Int      @default(1)
+  negativeMarks Float  @default(0) @map("negative_marks")
+
+  options     QuestionOption[]
+  correctOptionId String? @map("correct_option_id")
+
+  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@map("exam_questions")
+  @@schema("public")
+}
+
+model QuestionOption {
+  id          String   @id @default(uuid())
+  questionId  String   @map("question_id")
+  text        String
+  isCorrect   Boolean  @default(false) @map("is_correct")
+
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_options")
+  @@schema("public")
+}
+
+model ExamAttempt {
+  id          String   @id @default(uuid())
+  examId      String   @map("exam_id")
+  userId      String   @map("user_id")
+  
+  status      AttemptStatus @default(IN_PROGRESS)
+  score       Float?
+  rank        Int?
+  percentile  Float?
+  
+  startedAt   DateTime @default(now()) @map("started_at")
+  submittedAt DateTime? @map("submitted_at")
+  
+  answers     Json?    // Store full answer map for simplicity
+
+  exam        Exam     @relation(fields: [examId], references: [id])
+  user        Profile  @relation(fields: [userId], references: [id])
+
+  @@map("exam_attempts")
+  @@schema("public")
+}
+
+enum ExamType {
+  ENTRANCE
+  SEMESTER
+  COMPETITIVE
+  CERTIFICATION
+  MOCK
+  @@schema("public")
+}
+
+enum QuestionType {
+  MCQ
+  SUBJECTIVE
+  TRUE_FALSE
+  @@schema("public")
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+  @@schema("public")
+}
+
+// =============================================================================
+// 4️⃣ PROFESSIONAL IDENTITY (CAREER GRAPH)
+// =============================================================================
+
+model Experience {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  title       String
+  company     String
+  location    String?
+  startDate   DateTime @map("start_date")
+  endDate     DateTime? @map("end_date")
+  isCurrent   Boolean  @default(false) @map("is_current")
+  description String?
+
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("experiences")
+  @@schema("public")
+}
+
+model Education {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  institution String
+  degree      String
+  fieldOfStudy String? @map("field_of_study")
+  startDate   DateTime @map("start_date")
+  endDate     DateTime? @map("end_date")
+  grade       String?
+
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("educations")
+  @@schema("public")
+}
+
+model UserSkill {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  level       SkillLevel @default(BEGINNER)
+  endorsements Int     @default(0)
+
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_skills")
+  @@schema("public")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  title       String
+  description String?
+  url         String?
+  technologies String[]
+
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("projects")
+  @@schema("public")
+}
+
+model Certification {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  name        String
+  issuer      String
+  issueDate   DateTime @map("issue_date")
+  expiryDate  DateTime? @map("expiry_date")
+  credentialId String? @map("credential_id")
+  url         String?
+
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("certifications")
+  @@schema("public")
+}
+
+model Resume {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  fileUrl     String   @map("file_url")
+  parsedText  String?  @map("parsed_text") // For AI Analysis
+  atsScore    Float?   @map("ats_score")
+  
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("resumes")
+  @@schema("public")
+}
+
+enum SkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+  @@schema("public")
+}
+
+// =============================================================================
+// 5️⃣ SOCIAL & COMMUNITY LAYER
+// =============================================================================
+
+model SocialPost {
+  id          String   @id @default(uuid())
+  authorId    String   @map("author_id")
+  content     String?
+  mediaUrls   String[] @map("media_urls")
+  hashtags    String[]
+  
+  // Metrics
+  likesCount  Int      @default(0) @map("likes_count")
+  commentsCount Int    @default(0) @map("comments_count")
+  sharesCount Int      @default(0) @map("shares_count")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  author      Profile  @relation("AuthorPosts", fields: [authorId], references: [id], onDelete: Cascade)
+  comments    SocialComment[]
+  likes       SocialLike[]
+
+  @@map("social_posts")
+  @@schema("public")
+}
+
+model SocialComment {
+  id          String   @id @default(uuid())
+  postId      String   @map("post_id")
+  authorId    String   @map("author_id")
+  content     String
+  
+  post        SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author      Profile    @relation("AuthorComments", fields: [authorId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("social_comments")
+  @@schema("public")
+}
+
+model SocialLike {
+  id          String   @id @default(uuid())
+  postId      String   @map("post_id")
+  userId      String   @map("user_id")
+
+  post        SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user        Profile    @relation("UserLikes", fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([postId, userId])
+  @@map("social_likes")
+  @@schema("public")
+}
+
+model SocialFollow {
+  id          String   @id @default(uuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+
+  follower    Profile  @relation("Following", fields: [followerId], references: [id], onDelete: Cascade)
+  following   Profile  @relation("Followers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([followerId, followingId])
+  @@map("social_follows")
+  @@schema("public")
+}
+
+// =============================================================================
+// 6️⃣ MESSAGING & REALTIME
+// =============================================================================
+
+model ChatRoom {
+  id          String   @id @default(uuid())
+  type        ChatType @default(DIRECT)
+  name        String?  // For Groups
+  
+  participants ChatParticipant[]
+  messages    ChatMessage[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("chat_rooms")
+  @@schema("public")
+}
+
+model ChatParticipant {
+  id          String   @id @default(uuid())
+  roomId      String   @map("room_id")
+  userId      String   @map("user_id")
+  
+  room        ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade) // Added relation to Profile (indirectly handled in backend logic usually, but good for constraints)
+
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  @@unique([roomId, userId])
+  @@map("chat_participants")
+  @@schema("public")
+}
+
+model ChatMessage {
+  id          String   @id @default(uuid())
+  roomId      String   @map("room_id")
+  senderId    String   @map("sender_id")
+  content     String
+  type        MessageType @default(TEXT)
+  fileUrl     String?  @map("file_url")
+  
+  readBy      String[] @default([]) // Array of userIds who read
+
+  room        ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender      Profile  @relation("Sender", fields: [senderId], references: [id])
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("chat_messages")
+  @@schema("public")
+}
+
+enum ChatType {
+  DIRECT
+  GROUP
+  CHANNEL
+  @@schema("public")
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+  AUDIO
+  VIDEO
+  @@schema("public")
+}
+
+// =============================================================================
+// 7️⃣ INSTITUTIONAL ERP & ADMIN
+// =============================================================================
+
+model InstitutionAdmin {
+  id            String   @id @default(uuid())
+  universityId  String   @map("university_id")
+  userId        String   @map("user_id")
+  role          InstitutionRole @default(ADMIN)
+
+  university    University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  user          Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([universityId, userId])
+  @@map("institution_admins")
+  @@schema("public")
+}
+
+model AdmissionApplication {
+  id            String   @id @default(uuid())
+  universityId  String   @map("university_id")
+  courseId      String   @map("course_id")
+  applicantId   String   @map("applicant_id")
+  
+  status        ApplicationStatus @default(SUBMITTED)
+  documents     Json?    // Links to uploaded docs
+  
+  applicant     Profile  @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  
+  appliedAt     DateTime @default(now()) @map("applied_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("admission_applications")
+  @@schema("public")
+}
+
+enum InstitutionRole {
+  ADMIN
+  FACULTY
+  STAFF
+  @@schema("public")
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  @@schema("public")
+}
+
+// =============================================================================
+// 8️⃣ AI INTELLIGENCE LAYER
+// =============================================================================
+
+model AiConversation {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  title       String?
+  model       String   @default("gemini-pro")
+  
+  messages    AiMessage[]
+  
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("ai_conversations")
+  @@schema("public")
+}
+
+model AiMessage {
+  id              String   @id @default(uuid())
+  conversationId  String   @map("conversation_id")
+  role            AiRole
+  content         String   @db.Text
+  tokensUsed      Int?     @map("tokens_used")
+  
+  conversation    AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("ai_messages")
+  @@schema("public")
+}
+
+enum AiRole {
+  user
+  assistant
+  system
+  @@schema("public")
+}
+
+// =============================================================================
+// 9️⃣ SCHOLARSHIPS & JOBS (OPPORTUNITIES)
+// =============================================================================
+
+model Scholarship {
+  id          String   @id @default(uuid())
+  title       String
+  provider    String
+  amount      Float?
+  deadline    DateTime?
+  description String?
+  eligibilityCriteria Json? @map("eligibility_criteria")
+  
+  applications ScholarshipApplication[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("scholarships")
+  @@schema("public")
+}
+
+model ScholarshipApplication {
+  id            String   @id @default(uuid())
+  scholarshipId String   @map("scholarship_id")
+  applicantId   String   @map("applicant_id")
+  status        ApplicationStatus @default(SUBMITTED)
+  
+  scholarship   Scholarship @relation(fields: [scholarshipId], references: [id], onDelete: Cascade)
+  applicant     Profile     @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  appliedAt     DateTime @default(now()) @map("applied_at")
+
+  @@map("scholarship_applications")
+  @@schema("public")
+}
+
+model Job {
+  id          String   @id @default(uuid())
+  title       String
+  company     String
+  location    String?
+  type        JobType  @default(FULL_TIME)
+  salaryRange String?  @map("salary_range")
+  description String?
+  
+  applications JobApplication[]
+
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@map("jobs")
+  @@schema("public")
+}
+
+model JobApplication {
+  id          String   @id @default(uuid())
+  jobId       String   @map("job_id")
+  applicantId String   @map("applicant_id")
+  status      ApplicationStatus @default(SUBMITTED)
+  
+  job         Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  applicant   Profile  @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  appliedAt   DateTime @default(now()) @map("applied_at")
+
+  @@map("job_applications")
+  @@schema("public")
+}
+
+enum JobType {
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  FREELANCE
+  @@schema("public")
+}
+
+// =============================================================================
+// 🔟 SYSTEM & ADMIN
+// =============================================================================
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  title       String
+  message     String
+  type        NotificationType @default(INFO)
+  isRead      Boolean  @default(false) @map("is_read")
+  
+  user        Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
+  @@schema("public")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?  @map("user_id")
+  action      String
+  entityType  String?  @map("entity_type")
+  entityId    String?  @map("entity_id")
+  details     Json?
+  severity    String   @default("LOW")
+  ipAddress   String?  @map("ip_address")
+  userAgent   String?  @map("user_agent")
+  
+  user        Profile? @relation(fields: [userId], references: [id])
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("audit_logs")
+  @@schema("public")
+}
+
+model AdminLog {
+  id      String   @id @default(uuid())
+  adminId String?  @map("admin_id")
+  action  String
+  details String?
+  admin   Profile? @relation(fields: [adminId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("admin_logs")
+  @@schema("public")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
+  @@schema("public")
+}
+
+model TeamMember {
+  id        String  @id @default(uuid())
+  name      String
+  role      String
+  avatarUrl String? @map("avatar_url")
+  bio       String?
+  linkedin  String?
+  twitter   String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("team_members")
+  @@schema("public")
+}
+
+model OtpVerification {
+  id        String   @id @default(uuid())
+  email     String?
+  phone     String?
+  code      String
+  type      String // 'registration', 'login', 'password_reset'
+  expiresAt DateTime @map("expires_at")
+  verified  Boolean  @default(false)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("otp_verifications")
+  @@schema("public")
+}
+
+model CmsContent {
+  id     String @id @default(uuid())
+  slug   String @unique
+  title  String
+  body   String
+  status String @default("draft") // draft, published
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("cms_content")
+  @@schema("public")
+}
+
+model ContactSubmission {
+  id      String @id @default(uuid())
+  name    String
+  email   String
+  subject String
+  message String
+  status  String @default("new")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("contact_submissions")
+  @@schema("public")
+}
+
+model Resource {
+  id      String  @id @default(uuid())
+  title   String
+  type    String
+  subject String?
+  fileUrl String  @map("file_url")
+
+  universityId String? @map("university_id")
+  uploaderId   String? @map("uploader_id")
+
+  university University? @relation(fields: [universityId], references: [id])
+  uploader   Profile?    @relation(fields: [uploaderId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([type])
+  @@index([subject])
+  @@map("resources")
+  @@schema("public")
+}
+
+model Todo {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  title     String
+  completed Boolean   @default(false)
+  priority  String    @default("medium") // low, medium, high
+  dueDate   DateTime? @map("due_date")
+
+  user      Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("todos")
+  @@schema("public")
+}
+
+model Workspace {
+  id          String  @id @default(uuid())
+  name        String
+  description String?
+  iconUrl     String? @map("icon_url")
+  ownerId     String  @map("owner_id")
+
+  owner    Profile           @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members  WorkspaceMember[]
+  channels Channel[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("chat_workspaces")
+  @@schema("public")
+}
+
+model WorkspaceMember {
+  id          String  @id @default(uuid())
+  workspaceId String  @map("workspace_id")
+  userId      String  @map("user_id")
+  roleId      String? @map("role_id")
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      Profile        @relation("WorkspaceMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime       @default(now()) @map("joined_at")
+
+  @@unique([workspaceId, userId])
+  @@map("chat_workspace_members")
+  @@schema("public")
+}
+
+model Channel {
+  id          String  @id @default(uuid())
+  workspaceId String? @map("workspace_id") // Null for DMs
+  name        String? // Null for DMs
+  type        String  @default("text") // 'text', 'voice', 'dm', 'group_dm'
+
+  workspace    Workspace?           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("chat_channels")
+  @@schema("public")
+}
+
+model AlumniProfile {
+  id             String  @id // Same as Profile.id
+  graduationYear Int?    @map("graduation_year")
+  degree         String?
+  currentCompany String? @map("current_company")
+  linkedinUrl    String? @map("linkedin_url")
+  isMentor       Boolean @default(false) @map("is_mentor")
+  bio            String?
+  expertise      String? // Comma separated string
+
+  profile             Profile             @relation(fields: [id], references: [id], onDelete: Cascade)
+  mentorshipsAsMentor MentorshipRequest[] @relation("MentorRequests")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("alumni_profiles")
+  @@schema("public")
+}
+
+model MentorshipRequest {
+  id       String @id @default(uuid())
+  mentorId String @map("mentor_id")
+  menteeId String @map("mentee_id")
+  message  String
+  status   String @default("pending")
+
+  mentor AlumniProfile @relation("MentorRequests", fields: [mentorId], references: [id], onDelete: Cascade)
+  mentee Profile       @relation("MenteeRequests", fields: [menteeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("mentorship_requests")
+  @@schema("public")
+}
+
+model Donation {
+  id      String  @id @default(uuid())
+  userId  String  @map("user_id")
+  amount  Decimal
+  purpose String?
+  status  String  @default("pending")
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("donations")
+  @@schema("public")
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  ALERT
+  @@schema("public")
+}

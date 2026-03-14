@@ -1,0 +1,133 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
+
+:root {
+  /* A lighter, cleaner, hybrid theme: Corporate + Discord-ish blue + Instagram/Twitter vibrance */
+  --background: 0 0% 100%; /* Pure white background */
+  --foreground: 222 47% 11%; /* Dark text */
+  --card: 0 0% 100%;
+  --card-foreground: 222 47% 11%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
+  
+  /* Vibrant Primary (Twitter/Discord mix) */
+  --primary: 230 100% 65%; /* #4d7cff - vibrant blue */
+  --primary-foreground: 0 0% 100%;
+  
+  /* Clean Secondary (Corporate) */
+  --secondary: 210 40% 96%; /* Very light blue/gray */
+  --secondary-foreground: 222 47% 11%;
+  
+  /* Subtle Muted tones */
+  --muted: 210 40% 96%;
+  --muted-foreground: 215 16% 47%;
+  
+  /* Instagram-ish accent for gradients/highlights */
+  --accent: 326 100% 74%; /* Vibrant pink */
+  --accent-foreground: 0 0% 100%;
+  
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
+  --ring: 230 100% 65%;
+  --radius: 0.75rem;
+}
+
+.dark {
+  /* Slightly lighter dark mode, less aggressive than pure black */
+  --background: 224 25% 12%; /* Dark grayish blue */
+  --foreground: 210 40% 98%;
+  --card: 224 25% 15%;
+  --card-foreground: 210 40% 98%;
+  --popover: 224 25% 15%;
+  --popover-foreground: 210 40% 98%;
+  
+  --primary: 230 100% 70%;
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 224 25% 20%;
+  --secondary-foreground: 210 40% 98%;
+  
+  --muted: 224 25% 20%;
+  --muted-foreground: 215 20% 65%;
+  
+  --accent: 326 100% 74%;
+  --accent-foreground: 0 0% 100%;
+  
+  --destructive: 0 91% 71%;
+  --destructive-foreground: 222 47% 5%;
+  --border: 224 25% 20%;
+  --input: 224 25% 20%;
+  --ring: 230 100% 70%;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+    100% { transform: translateY(0px); }
+  }
+  @keyframes scroll {
+    to {
+      transform: translate(calc(-50% - 0.5rem));
+    }
+  }
+  --animate-scroll: scroll var(--animation-duration, 40s) var(--animation-direction, forwards) linear infinite;
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/10 backdrop-blur-lg border border-white/20;
+  }
+  
+  .glass-dark {
+    @apply bg-black/10 backdrop-blur-lg border border-white/10;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/50;
+  }
+}
+
+body {
+  @apply bg-background text-foreground font-sans antialiased selection:bg-primary/20;
+}

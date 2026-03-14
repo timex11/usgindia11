@@ -1,0 +1,43 @@
+# Build artifacts and Node modules
+node_modules/
+dist/
+.next/
+build/
+*.tsbuildinfo
+
+# Secrets & Environment variables
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+error.log
+error2.log
+error3.log
+cloudflare_debug.log
+cf_err.log
+cf_out.log
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.qoder/
+.roo/
+.trae/
+
+# Cloudflare credentials
+.cloudflare/
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!nest-cli.json
