@@ -3,6 +3,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ApplicationStatus } from '@shared/types/enums';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class ScholarshipsService {
@@ -11,6 +13,8 @@ export class ScholarshipsService {
   constructor(
     private prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    @InjectQueue('email') private readonly emailQueue: Queue,
+    @InjectQueue('notification-dispatch') private readonly notificationQueue: Queue,
   ) {}
 
   async create(data: Prisma.ScholarshipCreateInput) {
@@ -90,16 +94,24 @@ export class ScholarshipsService {
     const application = await this.prisma.scholarshipApplication.update({
       where: { id },
       data: { status },
-      include: { scholarship: true },
+      include: { scholarship: true, applicant: true },
     });
 
-    // Notify user
+    // Notify user via direct service
     await this.notificationsService.createNotification(
       application.applicantId,
       'INFO',
       'Scholarship Status Updated',
       `Your application for ${application.scholarship.title} is now ${status}.`,
     );
+
+    // Notify user via background dispatch
+    await this.notificationQueue.add('dispatch', {
+      userId: application.applicantId,
+      title: 'Scholarship Update',
+      body: `Your application for ${application.scholarship.title} has reached a new stage: ${status}.`,
+      type: 'SUCCESS',
+    });
 
     return application;
   }
@@ -167,13 +179,31 @@ export class ScholarshipsService {
       throw new Error('Already applied to this scholarship');
     }
 
-    return this.prisma.scholarshipApplication.create({
+    const application = await this.prisma.scholarshipApplication.create({
       data: {
         applicantId: userId,
-        scholarshipId,
+        scholarshipId: scholarshipId,
         status: ApplicationStatus.SUBMITTED,
       },
+      include: { scholarship: true, applicant: true },
     });
+
+    // Notify user of successful submission via BullMQ
+    await this.notificationQueue.add('dispatch', {
+      userId: userId,
+      title: 'Scholarship Applied',
+      body: `You have successfully applied for the ${application.scholarship.title}.`,
+      type: 'INFO',
+    });
+
+    // Send confirmation email via BullMQ
+    await this.emailQueue.add('send', {
+      to: application.applicant.email,
+      subject: 'Scholarship Application Received',
+      body: `We have received your application for ${application.scholarship.title}.`,
+    });
+
+    return application;
   }
 
   async update(id: string, data: Prisma.ScholarshipUpdateInput) {

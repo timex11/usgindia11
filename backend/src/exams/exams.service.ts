@@ -9,6 +9,8 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService, AuditEventType } from '../audit/audit.service';
 import { CreateExamDto } from './dto/create-exam.dto';
 import { AttemptStatus, Prisma } from '@prisma/client';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class ExamsService {
@@ -18,6 +20,8 @@ export class ExamsService {
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
     private readonly auditService: AuditService,
+    @InjectQueue('certificate') private readonly certificateQueue: Queue,
+    @InjectQueue('notification-dispatch') private readonly notificationQueue: Queue,
   ) {}
 
   async findAll() {
@@ -143,6 +147,7 @@ export class ExamsService {
       },
     });
 
+    // 1. Audit log
     await this.auditService.logEvent({
       eventType: AuditEventType.EXAM_SUBMITTED,
       userId: attempt.userId,
@@ -155,6 +160,7 @@ export class ExamsService {
       severity: 'low',
     });
 
+    // 2. Real-time notification
     try {
       await this.notificationsService.createNotification(
         attempt.userId,
@@ -163,10 +169,28 @@ export class ExamsService {
         `Your exam attempt for ${attempt.exam.title} has been ${status}. Score: ${score}`,
       );
     } catch (e) {
-      this.logger.error(
-        `Failed to send notification: ${e instanceof Error ? e.message : 'Unknown error'}`,
-      );
+      this.logger.error(`Notification failed: ${e.message}`);
     }
+
+    // 3. Queue certificate generation if passed (score > 50% for now)
+    const passThreshold = attempt.exam.totalMarks * 0.5;
+    if (score >= passThreshold) {
+      await this.certificateQueue.add('generate', {
+        userName: attempt.applicant?.fullName || 'Student',
+        examTitle: attempt.exam.title,
+        userId: attempt.userId,
+        examId: attempt.examId,
+        score,
+      });
+    }
+
+    // 4. Background notification dispatch
+    await this.notificationQueue.add('dispatch', {
+      userId: attempt.userId,
+      title: 'Exam Result Ready',
+      body: `Result for ${attempt.exam.title} is now out. You scored ${score}/${attempt.exam.totalMarks}.`,
+      type: score >= passThreshold ? 'SUCCESS' : 'INFO',
+    });
 
     return updatedAttempt;
   }

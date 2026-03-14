@@ -27,8 +27,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, User, Mail, Shield, UserCircle, ArrowRight, Zap } from "lucide-react";
 import { Turnstile } from "@marsidev/react-turnstile";
+import { motion } from "framer-motion";
 
 const registerSchema = z.object({
   email: z.string().email({
@@ -89,50 +90,80 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <div className="w-full max-w-lg">
+    <div className="min-h-screen flex items-center justify-center bg-[#05080f] relative overflow-hidden p-4">
+       {/* Background Aura */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-[10%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/10 blur-[150px] rounded-full" />
+        <div className="absolute bottom-[10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[150px] rounded-full animate-pulse" />
+      </div>
+
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="w-full max-w-[520px] relative z-10"
+      >
         <div className="flex justify-center mb-8">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logo.png" alt="USG India" width={40} height={40} className="rounded-xl object-contain shadow-sm" />
-            <span className="text-2xl font-bold text-slate-900 tracking-tight">USG INDIA</span>
+          <Link href="/" className="group flex items-center gap-3">
+            <div className="w-12 h-12 bg-slate-900 rounded-xl border border-slate-700 p-2 group-hover:scale-110 transition-transform shadow-xl">
+              <Image src="/logo.png" alt="USG India" width={40} height={40} className="object-contain" />
+            </div>
+            <span className="text-2xl font-black text-white tracking-tighter">USG INDIA</span>
           </Link>
         </div>
 
-        <Card className="border-none shadow-xl shadow-blue-500/5">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">Create your account</CardTitle>
-            <CardDescription className="text-center">
-              Join the largest student ecosystem in India
+        <Card className="bg-slate-900/40 backdrop-blur-2xl border-slate-800/60 shadow-2xl overflow-hidden">
+          <div className="h-1.5 w-full bg-linear-to-r from-blue-600 to-indigo-600" />
+          <CardHeader className="space-y-2 pb-6 pt-8 text-center">
+            <CardTitle className="text-3xl font-black text-white">Join the Network</CardTitle>
+            <CardDescription className="text-slate-400 font-medium">
+              Create your secure node in the largest student ecosystem
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 <FormField
                   control={form.control}
                   name="fullName"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-slate-300 font-bold ml-1">Full Legal Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} disabled={isLoading} />
+                        <div className="relative">
+                          <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500" />
+                          <Input 
+                            placeholder="John Alexander Doe" 
+                            {...field} 
+                            disabled={isLoading}
+                            className="h-12 bg-slate-950/50 border-slate-800 focus:border-blue-500/50 focus:ring-blue-500/20 pl-11 text-slate-200"
+                          />
+                        </div>
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-rose-500 font-medium" />
                     </FormItem>
                   )}
                 />
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <FormField
                     control={form.control}
                     name="email"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Email</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className="text-slate-300 font-bold ml-1">Primary Email</FormLabel>
                         <FormControl>
-                          <Input placeholder="m@example.com" type="email" {...field} disabled={isLoading} />
+                          <div className="relative">
+                            <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500" />
+                            <Input 
+                              placeholder="m@example.com" 
+                              type="email" 
+                              {...field} 
+                              disabled={isLoading} 
+                              className="h-12 bg-slate-950/50 border-slate-800 focus:border-blue-500/50 focus:ring-blue-500/20 pl-11 text-slate-200"
+                            />
+                          </div>
                         </FormControl>
-                        <FormMessage />
+                        <FormMessage className="text-rose-500 font-medium" />
                       </FormItem>
                     )}
                   />
@@ -141,22 +172,22 @@ export default function RegisterPage() {
                     control={form.control}
                     name="role"
                     render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>I am a...</FormLabel>
+                      <FormItem className="space-y-1.5">
+                        <FormLabel className="text-slate-300 font-bold ml-1">Platform Identity</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select your role" />
+                            <SelectTrigger className="h-12 bg-slate-950/50 border-slate-800 focus:border-blue-500/50 focus:ring-blue-500/20 text-slate-200 pl-4">
+                              <SelectValue placeholder="Select Identity" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="student">Student</SelectItem>
-                            <SelectItem value="teacher">Teacher / Faculty</SelectItem>
-                            <SelectItem value="alumni">Alumni</SelectItem>
-                            <SelectItem value="college">Institution Admin</SelectItem>
+                          <SelectContent className="bg-slate-900 border-slate-800 text-slate-200">
+                            <SelectItem value="student" className="focus:bg-blue-600 focus:text-white">Student</SelectItem>
+                            <SelectItem value="teacher" className="focus:bg-blue-600 focus:text-white">Mentor / Faculty</SelectItem>
+                            <SelectItem value="alumni" className="focus:bg-blue-600 focus:text-white">Alumni</SelectItem>
+                            <SelectItem value="college" className="focus:bg-blue-600 focus:text-white">Administration</SelectItem>
                           </SelectContent>
                         </Select>
-                        <FormMessage />
+                        <FormMessage className="text-rose-500 font-medium" />
                       </FormItem>
                     )}
                   />
@@ -166,42 +197,60 @@ export default function RegisterPage() {
                   control={form.control}
                   name="password"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
+                    <FormItem className="space-y-1.5">
+                      <FormLabel className="text-slate-300 font-bold ml-1">Universal Key</FormLabel>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" {...field} disabled={isLoading} />
+                        <div className="relative">
+                          <Shield className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500" />
+                          <Input 
+                            type="password" 
+                            placeholder="••••••••" 
+                            {...field} 
+                            disabled={isLoading} 
+                            className="h-12 bg-slate-950/50 border-slate-800 focus:border-blue-500/50 focus:ring-blue-500/20 pl-11 text-slate-200"
+                          />
+                        </div>
                       </FormControl>
-                      <FormDescription>
-                        At least 8 characters long
+                      <FormDescription className="text-[10px] text-slate-500 font-bold tracking-wider ml-1">
+                        MINIMUM 8 CHARACTERS &bull; AES-256 ENCRYPTED
                       </FormDescription>
-                      <FormMessage />
+                      <FormMessage className="text-rose-500 font-medium" />
                     </FormItem>
                   )}
                 />
 
-                <div className="flex justify-center py-2">
+                <div className="flex justify-center py-2 bg-slate-950/30 rounded-2xl border border-slate-800/50">
                   <Turnstile 
                     siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"} 
                     onSuccess={(token) => form.setValue("turnstileToken", token)}
+                    theme="dark"
                   />
                 </div>
 
-                <Button type="submit" className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-lg mt-4" disabled={isLoading}>
-                  {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-                  Create Account
+                <Button 
+                  type="submit" 
+                  className="w-full h-14 bg-indigo-600 hover:bg-indigo-500 text-white font-black text-lg rounded-2xl mt-4 transition-all hover:scale-[1.02] shadow-xl shadow-indigo-600/25 active:scale-[0.98]" 
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 className="mr-3 h-5 w-5 animate-spin" /> : <Zap className="mr-3 h-5 w-5 fill-current" />}
+                  Create Secure Account
                 </Button>
               </form>
             </Form>
 
-            <div className="mt-6 text-center text-sm">
-              <span className="text-slate-500">Already have an account? </span>
-              <Link href="/login" className="text-blue-600 font-semibold hover:underline">
-                Sign In
+            <div className="mt-8 text-center">
+              <span className="text-slate-500 font-medium mr-1.5">Already part of the network?</span>
+              <Link href="/login" className="text-indigo-500 font-black hover:text-indigo-400 underline underline-offset-4 decoration-2 decoration-indigo-500/30">
+                Log In
               </Link>
             </div>
           </CardContent>
         </Card>
-      </div>
+        
+        <p className="mt-10 text-center text-[10px] text-slate-600 font-black uppercase tracking-[0.4em]">
+          &copy; {new Date().getFullYear()} USG INDIA &bull; NODE-A1 &bull; PRIVACY PROTOCOL ACTIVE
+        </p>
+      </motion.div>
     </div>
   );
 }

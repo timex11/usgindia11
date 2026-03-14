@@ -4,6 +4,8 @@ import { JobType, ApplicationStatus } from '@shared/types/enums';
 import { CreateJobDto, UpdateJobDto } from './dto/create-job.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Prisma } from '@prisma/client';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
 @Injectable()
 export class JobsService {
@@ -12,6 +14,8 @@ export class JobsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notificationsService: NotificationsService,
+    @InjectQueue('email') private readonly emailQueue: Queue,
+    @InjectQueue('notification-dispatch') private readonly notificationQueue: Queue,
   ) {}
 
   async findAll(filters: {
@@ -64,9 +68,6 @@ export class JobsService {
     return this.prisma.jobApplication.findMany({
       include: {
         job: true,
-        // Using 'any' cast temporarily if applicant relation name mismatch occurs,
-        // but schema has 'applicant' which maps to 'Profile'
-        // In schema: applicant Profile @relation(...)
         applicant: {
           select: {
             id: true,
@@ -83,10 +84,10 @@ export class JobsService {
     const application = await this.prisma.jobApplication.update({
       where: { id },
       data: { status },
-      include: { job: true },
+      include: { job: true, applicant: true },
     });
 
-    // Notify user
+    // Direct notification
     await this.notificationsService.createNotification(
       application.applicantId,
       'INFO',
@@ -94,11 +95,18 @@ export class JobsService {
       `Your application for ${application.job.title} at ${application.job.company} is now ${status}.`,
     );
 
+    // BullMQ background notification
+    await this.notificationQueue.add('dispatch', {
+      userId: application.applicantId,
+      title: 'Job Update',
+      body: `Big news! Your application for ${application.job.title} is now ${status}.`,
+      type: 'SUCCESS',
+    });
+
     return application;
   }
 
   async apply(userId: string, jobId: string /* resumeUrl?: string */) {
-    // Check for existing application
     const existing = await this.prisma.jobApplication.findFirst({
       where: {
         jobId,
@@ -110,17 +118,26 @@ export class JobsService {
       throw new Error('Already applied to this job');
     }
 
-    return this.prisma.jobApplication.create({
+    const application = await this.prisma.jobApplication.create({
       data: {
         applicantId: userId,
-        jobId,
+        jobId: jobId,
         status: ApplicationStatus.SUBMITTED,
       },
+      include: { job: true, applicant: true },
     });
+
+    // Queue background email
+    await this.emailQueue.add('send', {
+      to: application.applicant.email,
+      subject: 'Application Received',
+      body: `Your application for ${application.job.title} has been received.`,
+    });
+
+    return application;
   }
 
   async create(data: CreateJobDto) {
-    // Cast DTO to Prisma Input if needed, but fields align
     return this.prisma.job.create({
       data: {
         title: data.title,

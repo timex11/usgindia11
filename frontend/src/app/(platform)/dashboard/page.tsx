@@ -53,14 +53,14 @@ export default function DashboardPage() {
   const recentActivity = data?.activity || [];
 
   return (
-    <MotionContainer className="flex-1 space-y-8 p-8 pt-6">
+    <MotionContainer className="flex-1 space-y-8 p-8 pt-6 bg-[#05080f]/50 min-h-screen">
       <CommandMenu />
       
-      <div className="flex items-center justify-between space-y-2">
+      <div className="flex items-center justify-between space-y-2 mb-8">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h2>
-          <p className="text-muted-foreground">
-            Welcome back, {user?.fullName || 'Student'}. Here&apos;s what&apos;s happening today.
+          <h2 className="text-4xl font-black tracking-tighter text-white">Console</h2>
+          <p className="text-slate-500 font-medium">
+            Welcome back, <span className="text-blue-400 font-bold">{user?.fullName || 'Scholar'}</span>. All systems operational.
           </p>
         </div>
         <div className="flex items-center space-x-2">

@@ -57,21 +57,22 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-2">
       <div className="flex items-center justify-between space-y-2">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Profile</h2>
-          <p className="text-muted-foreground">
-            Manage your personal information and preferences.
+          <h2 className="text-4xl font-black tracking-tighter text-white">Identity</h2>
+          <p className="text-slate-500 font-medium">
+            Manage your secure profile and platform credentials.
           </p>
         </div>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+      <div className="grid gap-8 md:grid-cols-2">
+        <Card className="bg-slate-900/40 backdrop-blur-3xl border-slate-800/60 shadow-2xl rounded-3xl overflow-hidden">
+          <div className="h-1.5 w-full bg-linear-to-r from-blue-600 to-indigo-600" />
           <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription>Update your personal details here.</CardDescription>
+            <CardTitle className="text-2xl font-black text-white">Core Identity</CardTitle>
+            <CardDescription className="text-slate-400 font-medium">Authentication and biometric associations.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center space-x-4">
