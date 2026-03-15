@@ -1,32 +1,208 @@
-name: Deploy to VPS
+# ==============================================================================
+#  USG India — GitHub Actions Deployment Workflow
+#
+#  ADD THESE SECRETS IN GITHUB:
+#  Repo → Settings → Secrets and variables → Actions → New repository secret
+#
+#    VPS_HOST          →  Your server IP or domain      e.g.  65.109.12.34
+#    VPS_USER          →  SSH login username             e.g.  root  or  ubuntu
+#    SSH_PRIVATE_KEY   →  Full private key text
+#                         (paste the ENTIRE block including -----BEGIN and -----END lines)
+#
+#  OPTIONAL:
+#    VPS_SSH_PORT      →  Only needed if your SSH port is NOT 22
+# ==============================================================================
+
+name: 🚀 Deploy to Production
 
 on:
   push:
     branches:
       - main
+  # Manual trigger from GitHub → Actions tab → Run workflow button
+  workflow_dispatch:
+    inputs:
+      skip_frontend:
+        description: "Skip frontend build?"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
+      skip_backend:
+        description: "Skip backend build?"
+        required: false
+        default: "false"
+        type: choice
+        options: ["false", "true"]
 
+# Only one deployment at a time — new push cancels in-progress run
 concurrency:
   group: production-deployment
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Validate secrets before touching the server
+  # ─────────────────────────────────────────────────────────────────────────
+  pre-check:
+    name: 🔍 Pre-flight Checks
     runs-on: ubuntu-latest
+    outputs:
+      deploy_args: ${{ steps.build-args.outputs.deploy_args }}
+
+    steps:
+      - name: Check all required secrets are set
+        # ✅ KEY FIX: Secrets must be passed via `env:` block and read as $VAR
+        #    DO NOT use ${{ secrets.X }} directly inside shell commands —
+        #    it works but GitHub warns it can leak values into logs.
+        #    Comparison like (secrets.X != '') in `with:` fields DOES NOT WORK.
+        env:
+          VPS_HOST:        ${{ secrets.VPS_HOST }}
+          VPS_USER:        ${{ secrets.VPS_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          FAILED=0
+
+          if [ -z "$VPS_HOST" ]; then
+            echo "❌ Secret VPS_HOST is missing or empty."
+            echo "   → Go to: Settings → Secrets and variables → Actions → New repository secret"
+            FAILED=1
+          else
+            echo "✅ VPS_HOST is set."
+          fi
+
+          if [ -z "$VPS_USER" ]; then
+            echo "❌ Secret VPS_USER is missing or empty."
+            FAILED=1
+          else
+            echo "✅ VPS_USER is set."
+          fi
+
+          if [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "❌ Secret SSH_PRIVATE_KEY is missing or empty."
+            echo "   → Paste the full private key including -----BEGIN and -----END lines."
+            FAILED=1
+          else
+            echo "✅ SSH_PRIVATE_KEY is set."
+          fi
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo ""
+            echo "──────────────────────────────────────────────"
+            echo "  One or more required secrets are missing."
+            echo "  Fix: Repo → Settings → Secrets and variables"
+            echo "       → Actions → New repository secret"
+            echo "──────────────────────────────────────────────"
+            exit 1
+          fi
+
+          echo ""
+          echo "All secrets verified. Proceeding to deploy."
+
+      - name: Build deploy script arguments
+        id: build-args
+        run: |
+          ARGS=""
+          [ "${{ github.event.inputs.skip_frontend }}" = "true" ] && ARGS="$ARGS --skip-frontend"
+          [ "${{ github.event.inputs.skip_backend }}"  = "true" ] && ARGS="$ARGS --skip-backend"
+          ARGS="${ARGS# }"
+          echo "deploy_args=${ARGS}" >> "$GITHUB_OUTPUT"
+          echo "Deploy args: '${ARGS:-none}'"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # JOB 2 — SSH into server and run deploy.sh
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: 🚢 Deploy to VPS
+    runs-on: ubuntu-latest
+    needs: pre-check
+
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.VPS_HOST }}
+          host:     ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          key:      ${{ secrets.SSH_PRIVATE_KEY }}
+
+          # ✅ PORT FIX:
+          #    GitHub Actions does NOT support expressions like (secrets.X != '' && secrets.X || '22')
+          #    in `with:` field values — it silently fails or gives syntax errors.
+          #    SOLUTION: If your SSH port is 22 (default), leave this line exactly as is.
+          #    If your port is different (e.g. 2222), just change the number below.
+          #    If you want it dynamic, add VPS_SSH_PORT as a secret and use the env trick — see below.
+          port: ${{ secrets.VPS_SSH_PORT || 22 }}
+          #
+          # ── If VPS_SSH_PORT secret is not set, appleboy/ssh-action defaults to 22 anyway,
+          #    so you can also safely remove the `port:` line entirely if using default port 22.
+
           script_stop: true
-          envs: GITHUB_SHA
+          envs: GITHUB_SHA,GITHUB_REF_NAME,GITHUB_ACTOR,GITHUB_RUN_NUMBER
+
           script: |
-            # Navigate to the application directory
-            cd /var/www/usgindia
-            
-            # Ensure the deployment script is executable
-            sudo chmod +x scripts/deploy.sh
-            
-            # Execute the deployment script
-            sudo bash scripts/deploy.sh
+            set -euo pipefail
+
+            DEPLOY_SCRIPT="/var/www/usgindia/scripts/deploy.sh"
+            DEPLOY_ARGS="${{ needs.pre-check.outputs.deploy_args }}"
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  USG India — Remote Deployment"
+            echo "  Triggered by : ${GITHUB_ACTOR}"
+            echo "  Branch       : ${GITHUB_REF_NAME}"
+            echo "  Commit       : ${GITHUB_SHA:0:8}"
+            echo "  Run #        : ${GITHUB_RUN_NUMBER}"
+            echo "  Script args  : ${DEPLOY_ARGS:-none}"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+
+            # ── Verify deploy script exists on the server ──────────────────
+            if [ ! -f "$DEPLOY_SCRIPT" ]; then
+              echo "❌ Deploy script not found at: $DEPLOY_SCRIPT"
+              echo ""
+              echo "  Upload it with:"
+              echo "  scp scripts/deploy.sh USER@HOST:/var/www/usgindia/scripts/deploy.sh"
+              exit 1
+            fi
+
+            # ── Ensure executable (safe to run every time) ─────────────────
+            chmod +x "$DEPLOY_SCRIPT"
+
+            # ── Run deployment ─────────────────────────────────────────────
+            sudo bash "$DEPLOY_SCRIPT" $DEPLOY_ARGS
+
+      # ── GitHub Actions job summary ─────────────────────────────────────────
+      - name: ✅ Write success summary
+        if: success()
+        run: |
+          {
+            echo "### ✅ Deployment Successful"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Commit** | \`${{ github.sha }}\` |"
+            echo "| **Branch** | \`${{ github.ref_name }}\` |"
+            echo "| **Triggered by** | @${{ github.actor }} |"
+            echo "| **Run** | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"
+            echo "| **Time** | $(date -u +'%Y-%m-%d %H:%M UTC') |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: ❌ Write failure summary
+        if: failure()
+        run: |
+          {
+            echo "### ❌ Deployment Failed"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| **Commit** | \`${{ github.sha }}\` |"
+            echo "| **Branch** | \`${{ github.ref_name }}\` |"
+            echo "| **Triggered by** | @${{ github.actor }} |"
+            echo ""
+            echo "> **Check the SSH step logs above for the exact error.**"
+            echo ">"
+            echo "> To rollback manually on your server:"
+            echo "> \`\`\`"
+            echo "> sudo bash /var/www/usgindia/scripts/deploy.sh --rollback"
+            echo "> \`\`\`"
+          } >> "$GITHUB_STEP_SUMMARY"
