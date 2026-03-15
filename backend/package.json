@@ -39,7 +39,7 @@
     "@google/generative-ai": "^0.24.1",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/bullmq": "^11.0.4",
-    "@nestjs/cache-manager": "^2.3.0",
+    "@nestjs/cache-manager": "^3.1.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.1",
@@ -56,7 +56,7 @@
     "@types/pg": "^8.16.0",
     "axios": "^1.13.5",
     "bullmq": "^5.67.1",
-    "cache-manager": "^5.7.6",
+    "cache-manager": "^7.2.8",
     "cache-manager-redis-yet": "^5.1.5",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.3",
@@ -79,8 +79,7 @@
     "swagger-ui-express": "^5.0.1",
     "systeminformation": "^5.31.1",
     "ua-parser-js": "^2.0.9",
-    "zod": "^4.3.6",
-    "zod-nestjs": "^1.9.2"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

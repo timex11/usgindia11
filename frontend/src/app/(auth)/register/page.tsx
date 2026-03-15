@@ -27,14 +27,13 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, User, Mail, Shield, UserCircle, ArrowRight, Zap } from "lucide-react";
+import { Loader2, User, Mail, Shield, Zap } from "lucide-react";
+// cspell:ignore marsidev
 import { Turnstile } from "@marsidev/react-turnstile";
 import { motion } from "framer-motion";
 
 const registerSchema = z.object({
-  email: z.string().email({
-    message: "Please enter a valid email address.",
-  }),
+  email: z.string().min(1, "Email is required").refine((val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), "Please enter a valid email address."),
   password: z.string().min(8, {
     message: "Password must be at least 8 characters.",
   }),
@@ -100,7 +99,7 @@ export default function RegisterPage() {
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-[520px] relative z-10"
+        className="w-full max-w-130 relative z-10"
       >
         <div className="flex justify-center mb-8">
           <Link href="/" className="group flex items-center gap-3">
@@ -223,7 +222,6 @@ export default function RegisterPage() {
                   <Turnstile 
                     siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"} 
                     onSuccess={(token) => form.setValue("turnstileToken", token)}
-                    theme="dark"
                   />
                 </div>
 

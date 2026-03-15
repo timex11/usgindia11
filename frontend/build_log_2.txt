@@ -1,0 +1,34 @@
+
+> frontend@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of c:\Users\m\pnpm-lock.yaml as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * c:\Users\m\Music\usgindia\frontend\package-lock.json
+
+▲ Next.js 16.1.4 (Turbopack)
+- Environments: .env.local, .env.production
+- Experiments (use with caution):
+  · optimizePackageImports
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 5.9min
+  Running TypeScript ...
+Failed to compile.
+
+./src/app/(auth)/login/page.tsx:179:21
+Type error: Type '{ siteKey: string; onSuccess: (token: string) => void; theme: string; }' is not assignable to type 'IntrinsicAttributes & TurnstileProps & RefAttributes<TurnstileInstance | undefined>'.
+  Property 'theme' does not exist on type 'IntrinsicAttributes & TurnstileProps & RefAttributes<TurnstileInstance | undefined>'.
+
+[0m [90m 177 |[39m                     siteKey[33m=[39m{process[33m.[39menv[33m.[39m[33mNEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY[39m [33m||[39m [32m"1x00000000000000000000AA"[39m} 
+ [90m 178 |[39m                     onSuccess[33m=[39m{(token) [33m=>[39m form[33m.[39msetValue([32m"turnstileToken"[39m[33m,[39m token)}
+[31m[1m>[22m[39m[90m 179 |[39m                     theme[33m=[39m[32m"dark"[39m
+ [90m     |[39m                     [31m[1m^[22m[39m
+ [90m 180 |[39m                   [33m/[39m[33m>[39m
+ [90m 181 |[39m                 [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m
+ [90m 182 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null

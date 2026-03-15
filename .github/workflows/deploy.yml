@@ -5,18 +5,28 @@ on:
     branches:
       - main
 
+concurrency:
+  group: production-deployment
+  cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script_stop: true
+          envs: GITHUB_SHA
           script: |
-            sudo /var/www/usgindia/scripts/deploy.sh
+            # Navigate to the application directory
+            cd /var/www/usgindia
+            
+            # Ensure the deployment script is executable
+            sudo chmod +x scripts/deploy.sh
+            
+            # Execute the deployment script
+            sudo bash scripts/deploy.sh

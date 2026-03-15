@@ -20,14 +20,13 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuthStore } from "@/store/useAuthStore";
-import { Loader2, Mail, Lock, ArrowRight, Sparkles } from "lucide-react";
+import { Loader2, Mail, Lock, Sparkles } from "lucide-react";
+// cspell:ignore marsidev
 import { Turnstile } from "@marsidev/react-turnstile";
 import { motion } from "framer-motion";
 
 const loginSchema = z.object({
-  email: z.string().min(1, { message: "Email is required" }).email({
-    message: "Please enter a valid email address.",
-  }),
+  email: z.string().min(1, "Email is required").refine((val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val), "Please enter a valid email address."),
   password: z.string().min(6, {
     message: "Password must be at least 6 characters.",
   }),
@@ -98,7 +97,7 @@ export default function LoginPage() {
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[440px] relative z-10"
+        className="w-full max-w-110 relative z-10"
       >
         <div className="flex flex-col items-center mb-10">
           <Link href="/" className="group flex flex-col items-center gap-4">
@@ -151,7 +150,7 @@ export default function LoginPage() {
                     <FormItem className="space-y-1.5">
                       <div className="flex justify-between items-center ml-1">
                         <FormLabel className="text-slate-300 font-bold">Security Key</FormLabel>
-                        <Link href="/forgot-password" size="sm" className="text-xs font-bold text-blue-500 hover:text-blue-400">
+                        <Link href="/forgot-password" className="text-xs font-bold text-blue-500 hover:text-blue-400">
                           Reset?
                         </Link>
                       </div>
@@ -176,7 +175,6 @@ export default function LoginPage() {
                   <Turnstile 
                     siteKey={process.env.NEXT_PUBLIC_CLOUDFLARE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA"} 
                     onSuccess={(token) => form.setValue("turnstileToken", token)}
-                    theme="dark"
                   />
                 </div>
 

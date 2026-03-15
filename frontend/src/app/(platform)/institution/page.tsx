@@ -1,6 +1,5 @@
 'use client';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, BookOpen, TrendingUp, Building, ArrowUpRight, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -14,8 +13,8 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
-  show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
-};
+  show: { y: 0, opacity: 1, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
+} as const;
 
 export default function InstitutionDashboardPage() {
   return (
@@ -54,7 +53,7 @@ export default function InstitutionDashboardPage() {
             { title: "Profile Impressions", icon: Building, value: "12.5k", trend: "+8.2% vs last week", color: "text-rose-400", bg: "bg-rose-500/10", border: "border-rose-500/20" }
           ].map((stat, i) => (
             <motion.div 
-              key={i} 
+              key={stat.title} 
               whileHover={{ y: -5, scale: 1.02 }}
               className={`bg-slate-900/40 backdrop-blur-xl border ${stat.border} rounded-2xl p-6 relative overflow-hidden group`}
             >
@@ -93,10 +92,10 @@ export default function InstitutionDashboardPage() {
                  </select>
                </div>
                
-               <div className="h-[300px] w-full relative flex items-end justify-between px-2 gap-2 mt-auto">
+               <div className="h-75 w-full relative flex items-end justify-between px-2 gap-2 mt-auto">
                  {/* Fake Chart Bars with animations */}
                  {[40, 70, 45, 90, 65, 85, 100, 50, 80, 60, 40, 75].map((height, i) => (
-                   <div key={i} className="w-full flex flex-col items-center gap-2 group">
+                   <div key={`bar-${i}`} className="w-full flex flex-col items-center gap-2 group">
                      <motion.div 
                        initial={{ height: 0 }}
                        animate={{ height: `${height}%` }}
@@ -124,7 +123,7 @@ export default function InstitutionDashboardPage() {
                     {name: "Amit Kumar", req: "Fee structure clarification", time: "5 hours ago", unread: false},
                     {name: "Sneha Reddy", req: "Placement statistics", time: "Yesterday", unread: false},
                   ].map((inq, i) => (
-                    <div key={i} className="flex gap-4 p-4 rounded-xl hover:bg-slate-800/50 border border-transparent hover:border-slate-700/50 transition-all cursor-pointer group">
+                    <div key={inq.name} className="flex gap-4 p-4 rounded-xl hover:bg-slate-800/50 border border-transparent hover:border-slate-700/50 transition-all cursor-pointer group">
                        <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center shrink-0 border border-slate-700 text-slate-300 font-medium group-hover:border-indigo-500 transition-colors">
                          {inq.name.charAt(0)}
                        </div>

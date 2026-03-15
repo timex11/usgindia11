@@ -21,7 +21,7 @@ module.exports = {
     {
       name: 'frontend',
       cwd: './frontend',
-      script: '.next/standalone/Music/usgindia/frontend/server.js',
+      script: '.next/standalone/server.js',
       instances: 1, 
       exec_mode: 'fork',
       autorestart: true,

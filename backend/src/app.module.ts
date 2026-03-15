@@ -46,7 +46,7 @@ import { MetricsModule } from './metrics/metrics.module';
 import { MetricsInterceptor } from './metrics/metrics.interceptor';
 import { SmsModule } from './sms/sms.module';
 import { FingerprintMiddleware } from '@shared/middleware/fingerprint.middleware';
-import { KafkaModule } from './kafka/kafka.module';
+// import { KafkaModule } from './kafka/kafka.module';
 import { AdmissionsModule } from './admissions/admissions.module';
 
 @Module({
@@ -149,7 +149,7 @@ import { AdmissionsModule } from './admissions/admissions.module';
     SearchModule,
     MetricsModule,
     SmsModule,
-    KafkaModule,
+    // KafkaModule,
     AdmissionsModule,
   ],
   controllers: [AppController],

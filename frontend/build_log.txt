@@ -1,0 +1,34 @@
+
+> frontend@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of c:\Users\m\pnpm-lock.yaml as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * c:\Users\m\Music\usgindia\frontend\package-lock.json
+
+▲ Next.js 16.1.4 (Turbopack)
+- Environments: .env.local, .env.production
+- Experiments (use with caution):
+  · optimizePackageImports
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+✓ Compiled successfully in 114s
+  Running TypeScript ...
+Failed to compile.
+
+./src/app/(auth)/login/page.tsx:154:55
+Type error: Type '{ children: string; href: string; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps<any>> & LinkProps<...> & { ...; } & RefAttributes<...>'.
+  Property 'size' does not exist on type 'IntrinsicAttributes & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps<any>> & LinkProps<...> & { ...; } & RefAttributes<...>'.
+
+[0m [90m 152 |[39m                       [33m<[39m[33mdiv[39m className[33m=[39m[32m"flex justify-between items-center ml-1"[39m[33m>[39m
+ [90m 153 |[39m                         [33m<[39m[33mFormLabel[39m className[33m=[39m[32m"text-slate-300 font-bold"[39m[33m>[39m[33mSecurity[39m [33mKey[39m[33m<[39m[33m/[39m[33mFormLabel[39m[33m>[39m
+[31m[1m>[22m[39m[90m 154 |[39m                         [33m<[39m[33mLink[39m href[33m=[39m[32m"/forgot-password"[39m size[33m=[39m[32m"sm"[39m className[33m=[39m[32m"text-xs font-bold text-blue-500 hover:text-blue-400"[39m[33m>[39m
+ [90m     |[39m                                                       [31m[1m^[22m[39m
+ [90m 155 |[39m                           [33mReset[39m[33m?[39m
+ [90m 156 |[39m                         [33m<[39m[33m/[39m[33mLink[39m[33m>[39m
+ [90m 157 |[39m                       [33m<[39m[33m/[39m[33mdiv[39m[33m>[39m[0m
+Next.js build worker exited with code: 1 and signal: null
